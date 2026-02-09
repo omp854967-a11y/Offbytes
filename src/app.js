@@ -39,7 +39,12 @@ const startServer = async () => {
 
   // Then try connecting to DB
   try {
-    const conn = await mongoose.connect(process.env.MONGO_URI || 'mongodb://localhost:27017/offbytes');
+    const mongoURI = process.env.MONGO_URI;
+    if (!mongoURI) {
+      throw new Error('MONGO_URI is not defined in Environment Variables! Please add it in Render Dashboard.');
+    }
+    
+    const conn = await mongoose.connect(mongoURI);
     console.log(`MongoDB Connected: ${conn.connection.host}`);
     dbStatus = 'Connected';
   } catch (error) {
