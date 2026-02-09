@@ -24,11 +24,16 @@ const getUserProfile = async (req, res) => {
         }
       }
 
+      // Default Avatar if missing
+      const defaultAvatar = 'https://ui-avatars.com/api/?name=' + encodeURIComponent(user.name) + '&background=random';
+
+      console.log(`Fetch Profile: Sending data for ${user.email} (Role: ${user.role})`);
+
       res.json({
         _id: user._id,
         name: businessDetails.businessName || user.name, // Prefer business name
         email: user.email,
-        profilePicture: user.profilePicture,
+        profilePicture: user.profilePicture || defaultAvatar,
         role: user.role,
         isVerified: user.isVerified || false,
         verificationStatus: user.verificationStatus || 'none',
