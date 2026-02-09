@@ -13,6 +13,12 @@ const googleAuth = async (req, res) => {
   const { token, accessToken } = req.body;
 
   try {
+    // Check Database Connection Status
+    const mongoose = require('mongoose');
+    if (mongoose.connection.readyState !== 1) {
+      throw new Error('Database is not connected. Please check server logs.');
+    }
+
     let name, email, picture, googleId;
 
     if (token) {
