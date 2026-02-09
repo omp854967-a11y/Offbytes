@@ -40,18 +40,22 @@ const startServer = async () => {
 
   // Then try connecting to DB
   try {
-    const mongoURI = process.env.MONGO_URI;
-    if (!mongoURI) {
-      throw new Error('MONGO_URI is not defined in Environment Variables! Please add it in Render Dashboard.');
-    }
+    // ⚠️ SECURITY WARNING: Hardcoding URI is bad practice. Use Environment Variables in production.
+    // We are using this as a FALLBACK if process.env.MONGO_URI is missing on Render.
+    const fallbackURI = 'mongodb+srv://omp433167_db_user:REAL_PASSWORD@cluster0.9lbmrxq.mongodb.net/offbytes?appName=Cluster0';
     
+    const mongoURI = process.env.MONGO_URI || fallbackURI;
+    
+    if (mongoURI === fallbackURI) {
+      console.warn('⚠️ WARNING: Using Hardcoded Fallback MONGO_URI. Please set MONGO_URI in Render Environment Variables.');
+    }
+
     const conn = await mongoose.connect(mongoURI);
     console.log(`MongoDB Connected: ${conn.connection.host}`);
     dbStatus = 'Connected';
   } catch (error) {
     console.error(`Database Connection Error: ${error.message}`);
     dbStatus = `Connection Error: ${error.message}`;
-    // Do NOT exit process so the server stays alive and we can see the error on the page
   }
 };
 
