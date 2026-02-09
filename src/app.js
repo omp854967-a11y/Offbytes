@@ -64,7 +64,10 @@ const startServer = async () => {
   // Database Connection
   const connectDB = async () => {
     try {
-      const mongoURI = process.env.MONGO_URI;
+      // ⚠️ Fallback if Env Var is missing on Render
+      const fallbackURI = 'mongodb+srv://pom465311_db_user:Offbytes2025Secure@cluster0.nkiryhq.mongodb.net/offbytes?appName=Cluster0';
+      const mongoURI = process.env.MONGO_URI || fallbackURI;
+      
       // console.log(`Connecting to MongoDB at: ${mongoURI}`); // Hide URI for security
 
       const conn = await mongoose.connect(mongoURI, {
