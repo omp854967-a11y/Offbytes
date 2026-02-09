@@ -67,36 +67,51 @@ const googleAuth = async (req, res) => {
     console.log(`Auth Check: Processing login for ${email}`);
 
     // 2. Check for Business User
-    const businessUser = await BusinessUser.findOne({ email });
+    // Normalize email for comparison
+    const normalizedEmail = email.trim().toLowerCase();
+    const businessUser = await BusinessUser.findOne({ email: normalizedEmail });
 
     let role = 'NORMAL_USER';
     if (businessUser) {
       role = 'BUSINESS';
-      console.log(`Auth Check: Found Business Account for ${email}`);
+      console.log(`Auth Check: Found Business Account for ${normalizedEmail} (Business Name: ${businessUser.businessName})`);
     } else {
-      console.log(`Auth Check: No Business Account found for ${email}. Defaulting to NORMAL_USER.`);
+      console.log(`Auth Check: No Business Account found for ${normalizedEmail}. Defaulting to NORMAL_USER.`);
     }
 
     // 3. Update or Create User in our main Users table
-    let user = await User.findOne({ email });
+    let user = await User.findOne({ email: normalizedEmail });
 
     let finalName = name;
     if (role === 'BUSINESS' && businessUser && businessUser.businessName) {
       finalName = businessUser.businessName;
     }
 
+    // Business users are auto-verified for now as per requirement
+    const verificationData = role === 'BUSINESS' ? {
+      isVerified: true,
+      verificationStatus: 'approved',
+      verifiedAt: new Date()
+    } : {};
+
     if (!user) {
       user = await User.create({
         name: finalName,
-        email,
+        email: normalizedEmail,
         googleId,
         profilePicture: picture,
         role,
+        ...verificationData
       });
     } else {
       user.name = finalName;
       user.profilePicture = picture;
       user.role = role;
+      if (role === 'BUSINESS') {
+         user.isVerified = true;
+         user.verificationStatus = 'approved';
+         if (!user.verifiedAt) user.verifiedAt = new Date();
+      }
       await user.save();
     }
 
