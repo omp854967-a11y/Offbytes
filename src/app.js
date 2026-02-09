@@ -23,10 +23,11 @@ app.use('/api/admin', require('./routes/adminRoutes'));
 
 // Global DB Status for debugging
 let dbStatus = 'Waiting for connection...';
+const APP_VERSION = 'v1.1 (Strict Atlas Mode)';
 
 // Basic Route
 app.get('/', (req, res) => {
-  res.send(`API is running... DB Status: ${dbStatus}`);
+  res.send(`API is running... [${APP_VERSION}] <br> DB Status: ${dbStatus}`);
 });
 
 // Database Connection & Server Start
