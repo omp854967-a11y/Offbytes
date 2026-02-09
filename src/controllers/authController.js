@@ -111,7 +111,9 @@ const googleAuth = async (req, res) => {
       success: true,
       role: user.role,
       user_id: user._id,
+      name: user.name,
       email: user.email,
+      profilePicture: user.profilePicture,
       token: authToken,
     });
 
