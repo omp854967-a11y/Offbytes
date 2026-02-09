@@ -96,9 +96,10 @@ const googleAuth = async (req, res) => {
     }
 
     // 4. Generate JWT
+    const jwtSecret = process.env.JWT_SECRET || 'dev_secret_key_123';
     const authToken = jwt.sign(
       { id: user._id, role: user.role },
-      process.env.JWT_SECRET,
+      jwtSecret,
       { expiresIn: '30d' }
     );
 
