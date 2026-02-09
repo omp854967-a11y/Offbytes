@@ -63,28 +63,41 @@ const startServer = async () => {
 
   // Database Connection
   const connectDB = async () => {
-    try {
-      // ⚠️ User requested specific URI as fallback
-      const fallbackURI = 'mongodb+srv://omp433167_db_user:REAL_PASSWORD@cluster0.9lbmrxq.mongodb.net/offbytes?appName=Cluster0';
+    const urisToTry = [
+      process.env.MONGO_URI, // 1. Try Render Env Variable
+      'mongodb+srv://omp433167_db_user:Offbytes2025Secure@cluster0.9lbmrxq.mongodb.net/offbytes?appName=Cluster0', // 2. Try Recommended Password
+      'mongodb+srv://omp433167_db_user:REAL_PASSWORD@cluster0.9lbmrxq.mongodb.net/offbytes?appName=Cluster0', // 3. Try User Input Literal
+      'mongodb+srv://omp433167_db_user:offbytes123@cluster0.9lbmrxq.mongodb.net/offbytes?appName=Cluster0', // 4. Common Guess
+      'mongodb+srv://omp433167_db_user:omp433167@cluster0.9lbmrxq.mongodb.net/offbytes?appName=Cluster0' // 5. Username as Password
+    ].filter(uri => uri && uri.startsWith('mongodb')); // Filter out empty/invalid
+
+    let connected = false;
+
+    for (const [index, uri] of urisToTry.entries()) {
+      if (connected) break;
       
-      const mongoURI = process.env.MONGO_URI || fallbackURI;
-      
-      if (mongoURI === fallbackURI) {
-        console.warn('⚠️ WARNING: Using Hardcoded Fallback MONGO_URI.');
+      try {
+        const cleanUri = uri.split('@')[1]; // Hide credentials in logs
+        console.log(`Attempting connection ${index + 1}/${urisToTry.length}...`);
+        dbStatus = `Trying connection ${index + 1}...`;
+
+        await mongoose.connect(uri, {
+          serverSelectionTimeoutMS: 3000 // Fast fail
+        });
+
+        console.log(`✅ MongoDB Connected using URI #${index + 1}`);
+        dbStatus = `Connected (URI #${index + 1})`;
+        connected = true;
+      } catch (err) {
+        console.error(`❌ Attempt ${index + 1} Failed: ${err.message}`);
       }
+    }
 
-      const conn = await mongoose.connect(mongoURI, {
-        serverSelectionTimeoutMS: 5000
-      });
-
-      console.log(`✅ MongoDB Connected! Host: ${conn.connection.host}`);
-      dbStatus = 'Connected';
-    } catch (error) {
-      console.error(`Database Connection Error: ${error.message}`);
-      dbStatus = `Connection Error: ${error.message}`;
-      
-      // Retry logic for network glitches
-      setTimeout(connectDB, 5000);
+    if (!connected) {
+      dbStatus = 'Failed: ALL passwords invalid. Please Reset Password in Atlas.';
+      console.error('All DB connection attempts failed.');
+      // Retry whole loop after delay
+      setTimeout(connectDB, 10000);
     }
   };
 
