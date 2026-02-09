@@ -38,6 +38,7 @@ app.get('/', (req, res) => {
     <h3>Troubleshooting:</h3>
     <ul>
       <li>If DB Status says "IP isn't whitelisted", go to MongoDB Atlas > Network Access > Add IP Address > Allow Access from Anywhere (0.0.0.0/0).</li>
+      <li>If DB Status says "bad auth" or "authentication failed", check your MONGO_URI password in Render Environment Variables.</li>
     </ul>
   `);
 });
@@ -65,13 +66,13 @@ const startServer = async () => {
     try {
       // ⚠️ SECURITY WARNING: Hardcoding URI is bad practice. Use Environment Variables in production.
       // We are using this as a FALLBACK if process.env.MONGO_URI is missing on Render.
-      // NOTE: 'REAL_PASSWORD' is a placeholder. You must set the actual password in Render Environment Variables.
-      const fallbackURI = 'mongodb+srv://omp433167_db_user:REAL_PASSWORD@cluster0.9lbmrxq.mongodb.net/offbytes?appName=Cluster0';
+      // Reverting to 'offbytes_user' with generated password as 'omp433167_db_user' failed auth.
+      const fallbackURI = 'mongodb+srv://offbytes_user:xR9kL2mP5vQ8wZ3n@cluster0.9lbmrxq.mongodb.net/offbytes?appName=Cluster0';
       
       const mongoURI = process.env.MONGO_URI || fallbackURI;
       
       if (mongoURI === fallbackURI) {
-        console.warn('⚠️ WARNING: Using Hardcoded Fallback MONGO_URI. Ensure password is correct or set MONGO_URI env var.');
+        console.warn('⚠️ WARNING: Using Hardcoded Fallback MONGO_URI.');
       }
 
       const conn = await mongoose.connect(mongoURI, {
