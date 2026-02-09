@@ -38,7 +38,8 @@ const postSchema = mongoose.Schema(
         userPicture: String,
         text: String,
         createdAt: { type: Date, default: Date.now }
-    }]
+    }],
+    expiresAt: { type: Date }
   },
   {
     timestamps: true,

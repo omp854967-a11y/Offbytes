@@ -1,6 +1,8 @@
 const Post = require('../models/Post');
 const User = require('../models/User');
 const BusinessUser = require('../models/BusinessUser');
+const Notification = require('../models/Notification');
+const SavedOffer = require('../models/SavedOffer');
 
 // @desc    Get home feed posts
 // @route   GET /api/posts/feed
@@ -143,7 +145,16 @@ const toggleSave = async (req, res) => {
 
 const createPost = async (req, res) => {
   try {
-    const { content, image } = req.body;
+    const { content } = req.body;
+    let image = req.body.image; // Fallback or if sent as string
+
+    // Handle File Upload
+    if (req.file) {
+        // Save relative path so frontend can construct full URL based on its environment (Emulator vs Device vs Web)
+        // Example: /uploads/17154321.jpg
+        image = `/uploads/${req.file.filename}`;
+        console.log(`Image saved as relative path: ${image}`);
+    }
     
     // Basic validation
     if ((!content || content.trim() === '') && !image) {
@@ -191,11 +202,31 @@ const createPost = async (req, res) => {
       content: content || '',
       image,
       author: authorData,
-      // Ensure no business-specific fields are set for normal users if they try to sneak them in
-      // Since the schema is flexible, we just rely on what we construct above in authorData
+      expiresAt: req.body.expiresAt ? new Date(req.body.expiresAt) : new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) // Default 7 days
     });
 
     const createdPost = await post.save();
+
+    // Trigger New Offer Alert (Type 1)
+    if (user.role === 'BUSINESS') {
+        // Find users to notify (Simple: All users except author)
+        // In real app: Nearby users or followers
+        const usersToNotify = await User.find({ _id: { $ne: user._id } }).select('_id');
+        
+        const notifications = usersToNotify.map(u => ({
+            user: u._id,
+            title: `New Offer from ${authorData.name}`,
+            message: content ? (content.length > 50 ? content.substring(0, 50) + '...' : content) : 'New offer posted!',
+            relatedId: createdPost._id,
+            relatedModel: 'Post',
+            type: 'new_offer'
+        }));
+        
+        if (notifications.length > 0) {
+            await Notification.insertMany(notifications);
+        }
+    }
+
     res.status(201).json(createdPost);
   } catch (error) {
     console.error(error);
@@ -203,4 +234,74 @@ const createPost = async (req, res) => {
   }
 };
 
-module.exports = { getHomeFeed, createPost, toggleLike, addComment, toggleSave };
+// @desc    Check Expiry and Notify
+// @route   GET /api/test/trigger-expiry
+// @access  Public (or Protected)
+const checkExpiryAndNotify = async (req, res) => {
+    try {
+        const today = new Date();
+        const tomorrow = new Date(today);
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        
+        // Find posts expiring in next 24h
+        const expiringPosts = await Post.find({
+            expiresAt: {
+                $gte: today,
+                $lt: tomorrow
+            }
+        });
+        
+        let notificationCount = 0;
+
+        for (const post of expiringPosts) {
+            // Notify users who saved this post
+            const savedOffers = await SavedOffer.find({ post: post._id });
+            
+            for (const saved of savedOffers) {
+                const existing = await Notification.findOne({
+                    user: saved.user,
+                    relatedId: post._id,
+                    type: 'offer_expiry'
+                });
+                
+                if (!existing) {
+                    await Notification.create({
+                        user: saved.user,
+                        title: 'Offer Expiring Soon!',
+                        message: `The offer from ${post.author.name} is expiring today.`,
+                        relatedId: post._id,
+                        relatedModel: 'Post',
+                        type: 'offer_expiry'
+                    });
+                    notificationCount++;
+                }
+            }
+        }
+        
+        res.json({ message: `Expiry check complete. Sent ${notificationCount} notifications.` });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Server Error' });
+    }
+};
+
+// @desc    Get single post
+// @route   GET /api/posts/:id
+// @access  Public
+const getPostById = async (req, res) => {
+    try {
+        const post = await Post.findById(req.params.id);
+        if (!post) {
+            return res.status(404).json({ message: 'Post not found' });
+        }
+        res.json(post);
+    } catch (error) {
+        console.error(error);
+        if (error.kind === 'ObjectId') {
+             return res.status(404).json({ message: 'Post not found' });
+        }
+        res.status(500).json({ message: 'Server Error' });
+    }
+};
+
+module.exports = { getHomeFeed, createPost, toggleLike, addComment, toggleSave, checkExpiryAndNotify, getPostById };

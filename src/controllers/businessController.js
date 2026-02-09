@@ -221,6 +221,29 @@ const updateBusinessProfile = async (req, res) => {
     await businessUser.save();
     await user.save();
 
+    // Trigger Business Profile Update Notification (Type 4)
+    // Notify users who have saved offers from this business
+    const posts = await Post.find({ "author.id": user._id.toString() }).select('_id');
+    const postIds = posts.map(p => p._id);
+    
+    if (postIds.length > 0) {
+        const savedOffers = await SavedOffer.find({ post: { $in: postIds } }).populate('user', '_id');
+        const uniqueUserIds = [...new Set(savedOffers.map(s => s.user._id.toString()))];
+        
+        const notifications = uniqueUserIds.map(userId => ({
+            user: userId,
+            title: `${businessUser.businessName} Updated Profile`,
+            message: 'A business you are interested in has updated their profile.',
+            relatedId: user._id,
+            relatedModel: 'User',
+            type: 'business_update'
+        }));
+        
+        if (notifications.length > 0) {
+            await Notification.insertMany(notifications);
+        }
+    }
+
     res.json({
       _id: user._id,
       name: user.name,

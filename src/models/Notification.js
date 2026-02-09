@@ -20,10 +20,10 @@ const notificationSchema = new mongoose.Schema({
   },
   relatedModel: {
     type: String,
-    enum: ['Post', 'BusinessUser'],
+    enum: ['Post', 'BusinessUser', 'User'],
   },
   type: {
-    type: String, // 'like', 'comment', 'system', 'offer', 'business'
+    type: String, // 'like', 'comment', 'system', 'new_offer', 'offer_expiry', 'saved_offer_update', 'business_update'
     default: 'system',
   },
   isRead: {
