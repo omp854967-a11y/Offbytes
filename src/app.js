@@ -65,13 +65,13 @@ const startServer = async () => {
     try {
       // ⚠️ SECURITY WARNING: Hardcoding URI is bad practice. Use Environment Variables in production.
       // We are using this as a FALLBACK if process.env.MONGO_URI is missing on Render.
-      // Password generated: xR9kL2mP5vQ8wZ3n
-      const fallbackURI = 'mongodb+srv://offbytes_user:xR9kL2mP5vQ8wZ3n@cluster0.9lbmrxq.mongodb.net/offbytes?appName=Cluster0';
+      // NOTE: 'REAL_PASSWORD' is a placeholder. You must set the actual password in Render Environment Variables.
+      const fallbackURI = 'mongodb+srv://omp433167_db_user:REAL_PASSWORD@cluster0.9lbmrxq.mongodb.net/offbytes?appName=Cluster0';
       
       const mongoURI = process.env.MONGO_URI || fallbackURI;
       
       if (mongoURI === fallbackURI) {
-        console.warn('⚠️ WARNING: Using Hardcoded Fallback MONGO_URI.');
+        console.warn('⚠️ WARNING: Using Hardcoded Fallback MONGO_URI. Ensure password is correct or set MONGO_URI env var.');
       }
 
       const conn = await mongoose.connect(mongoURI, {
