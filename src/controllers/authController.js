@@ -46,7 +46,7 @@ const googleAuth = async (req, res) => {
       }
       
       name = payload.name;
-      email = payload.email;
+      email = payload.email.toLowerCase(); // Force lowercase
       picture = payload.picture;
       googleId = payload.sub;
     } else if (accessToken) {
@@ -55,14 +55,14 @@ const googleAuth = async (req, res) => {
         headers: { Authorization: `Bearer ${accessToken}` }
       });
       name = response.data.name;
-      email = response.data.email;
+      email = response.data.email.toLowerCase(); // Force lowercase
       picture = response.data.picture;
       googleId = response.data.sub;
     } else {
       throw new Error('No authentication token provided');
     }
 
-    console.log('User Auth Success:', { name, email }); // Log for debugging
+    console.log(`Auth Check: Processing login for ${email}`);
 
     // 2. Check for Business User
     const businessUser = await BusinessUser.findOne({ email });
@@ -70,6 +70,9 @@ const googleAuth = async (req, res) => {
     let role = 'NORMAL_USER';
     if (businessUser) {
       role = 'BUSINESS';
+      console.log(`Auth Check: Found Business Account for ${email}`);
+    } else {
+      console.log(`Auth Check: No Business Account found for ${email}. Defaulting to NORMAL_USER.`);
     }
 
     // 3. Update or Create User in our main Users table
