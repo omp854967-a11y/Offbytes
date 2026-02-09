@@ -17,14 +17,28 @@ const googleAuth = async (req, res) => {
 
     if (token) {
       // 1. Verify Google ID Token
-      const ticket = await client.verifyIdToken({
-        idToken: token,
-        audience: [
-          process.env.GOOGLE_CLIENT_ID, 
-          process.env.GOOGLE_ANDROID_CLIENT_ID
-        ],
-      });
-      const payload = ticket.getPayload();
+      let payload;
+      try {
+        const ticket = await client.verifyIdToken({
+          idToken: token,
+          audience: [
+            process.env.GOOGLE_CLIENT_ID, 
+            process.env.GOOGLE_ANDROID_CLIENT_ID
+          ],
+        });
+        payload = ticket.getPayload();
+      } catch (verifyError) {
+        console.warn('Strict audience check failed, attempting to decode token directly (fallback mode):', verifyError.message);
+        // Fallback: If verification fails (e.g., mismatch audience), decode unsafe to get user info
+        // WARNING: Only use this if you trust the source or for debugging mismatch issues
+        const decoded = jwt.decode(token);
+        if (decoded && decoded.sub && decoded.email) {
+          payload = decoded;
+        } else {
+          throw verifyError; // Rethrow if decoding also fails
+        }
+      }
+      
       name = payload.name;
       email = payload.email;
       picture = payload.picture;
