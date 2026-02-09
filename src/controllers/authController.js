@@ -125,7 +125,8 @@ const googleAuth = async (req, res) => {
 // @route   POST /api/auth/register-business
 // @access  Public
 const registerBusiness = async (req, res) => {
-  const { businessName, businessAddress, pincode, timing, email } = req.body;
+  let { businessName, businessAddress, pincode, timing, email } = req.body;
+  email = email.toLowerCase(); // Force lowercase
 
   try {
     // Check if business already exists
