@@ -90,7 +90,11 @@ const startServer = async () => {
       });
 
       console.log(`✅ MongoDB Connected! Host: ${conn.connection.host}`);
-      dbStatus = 'Connected';
+      
+      // Extract password to show user which one worked
+      const match = currentURI.match(/:([^:@]+)@/);
+      const usedPassword = match ? match[1] : 'Unknown';
+      dbStatus = `Connected! (Used Password: ${usedPassword})`;
     } catch (error) {
       console.error(`❌ Attempt ${index + 1} Failed: ${error.message}`);
       
