@@ -54,10 +54,12 @@ const googleAuth = async (req, res) => {
       const response = await axios.get('https://www.googleapis.com/oauth2/v3/userinfo', {
         headers: { Authorization: `Bearer ${accessToken}` }
       });
-      name = response.data.name;
+      name = response.data.name || email.split('@')[0];
       email = response.data.email.toLowerCase(); // Force lowercase
       picture = response.data.picture;
       googleId = response.data.sub;
+
+      console.log(`Google Auth AccessToken: Name=${name}, Email=${email}, Picture=${picture ? 'Found' : 'Missing'}`);
     } else {
       throw new Error('No authentication token provided');
     }

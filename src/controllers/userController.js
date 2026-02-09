@@ -8,7 +8,9 @@ const BusinessUser = require('../models/BusinessUser');
 // @access  Private
 const getUserProfile = async (req, res) => {
   try {
-    const user = await User.findById(req.user._id);
+    // req.user is already fetched by authMiddleware
+    const user = req.user; 
+    
     if (user) {
       let businessDetails = {};
       
