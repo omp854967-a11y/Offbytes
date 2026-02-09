@@ -66,8 +66,8 @@ const startServer = async () => {
     try {
       // ⚠️ SECURITY WARNING: Hardcoding URI is bad practice. Use Environment Variables in production.
       // We are using this as a FALLBACK if process.env.MONGO_URI is missing on Render.
-      // Reverting to 'offbytes_user' with generated password as 'omp433167_db_user' failed auth.
-      const fallbackURI = 'mongodb+srv://offbytes_user:xR9kL2mP5vQ8wZ3n@cluster0.9lbmrxq.mongodb.net/offbytes?appName=Cluster0';
+      // Password to be set in Atlas: Offbytes2025Secure
+      const fallbackURI = 'mongodb+srv://omp433167_db_user:Offbytes2025Secure@cluster0.9lbmrxq.mongodb.net/offbytes?appName=Cluster0';
       
       const mongoURI = process.env.MONGO_URI || fallbackURI;
       
