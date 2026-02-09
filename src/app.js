@@ -61,51 +61,30 @@ const startServer = async () => {
     serverIP = 'Unknown';
   }
 
-  // ⚠️ SMART AUTO-CONNECT: Tries multiple possible passwords to find the one the user set
-  const possibleURIs = [
-    // 1. User provided string literally (Most Likely if they copy-pasted blindly)
-    process.env.MONGO_URI, 
-    'mongodb+srv://omp433167_db_user:REAL_PASSWORD@cluster0.9lbmrxq.mongodb.net/offbytes?appName=Cluster0',
-    // 2. The secure password I asked them to set
-    'mongodb+srv://omp433167_db_user:Offbytes2025Secure@cluster0.9lbmrxq.mongodb.net/offbytes?appName=Cluster0',
-    // 3. The original generated password
-    'mongodb+srv://offbytes_user:xR9kL2mP5vQ8wZ3n@cluster0.9lbmrxq.mongodb.net/offbytes?appName=Cluster0',
-    // 4. Common fallback
-    'mongodb+srv://omp433167_db_user:password@cluster0.9lbmrxq.mongodb.net/offbytes?appName=Cluster0'
-  ].filter(uri => uri); // Remove undefined/null
-
-  const connectDB = async (index = 0) => {
-    if (index >= possibleURIs.length) {
-      dbStatus = 'Failed: All password attempts failed. Please update MONGO_URI in Render.';
-      console.error('❌ All connection attempts failed.');
-      return;
-    }
-
-    const currentURI = possibleURIs[index];
-    console.log(`🔄 Attempting connection ${index + 1}/${possibleURIs.length}...`);
-
+  // Database Connection
+  const connectDB = async () => {
     try {
-      const conn = await mongoose.connect(currentURI, {
-        serverSelectionTimeoutMS: 3000 // Fast fail
+      // ⚠️ User requested specific URI as fallback
+      const fallbackURI = 'mongodb+srv://omp433167_db_user:REAL_PASSWORD@cluster0.9lbmrxq.mongodb.net/offbytes?appName=Cluster0';
+      
+      const mongoURI = process.env.MONGO_URI || fallbackURI;
+      
+      if (mongoURI === fallbackURI) {
+        console.warn('⚠️ WARNING: Using Hardcoded Fallback MONGO_URI.');
+      }
+
+      const conn = await mongoose.connect(mongoURI, {
+        serverSelectionTimeoutMS: 5000
       });
 
       console.log(`✅ MongoDB Connected! Host: ${conn.connection.host}`);
-      
-      // Extract password to show user which one worked
-      const match = currentURI.match(/:([^:@]+)@/);
-      const usedPassword = match ? match[1] : 'Unknown';
-      dbStatus = `Connected! (Used Password: ${usedPassword})`;
+      dbStatus = 'Connected';
     } catch (error) {
-      console.error(`❌ Attempt ${index + 1} Failed: ${error.message}`);
+      console.error(`Database Connection Error: ${error.message}`);
+      dbStatus = `Connection Error: ${error.message}`;
       
-      if (error.message.includes('bad auth') || error.message.includes('authentication failed')) {
-        // If auth failed, try next password IMMEDIATELY
-        await connectDB(index + 1);
-      } else {
-        // If network error (whitelist), retry same URI after delay
-        dbStatus = `Connection Error: ${error.message}`;
-        setTimeout(() => connectDB(index), 5000);
-      }
+      // Retry logic for network glitches
+      setTimeout(connectDB, 5000);
     }
   };
 
