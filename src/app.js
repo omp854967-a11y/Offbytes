@@ -26,21 +26,20 @@ app.get('/', (req, res) => {
   res.send('API is running...');
 });
 
-// Database Connection
-const connectDB = async () => {
+// Database Connection & Server Start
+const startServer = async () => {
   try {
     const conn = await mongoose.connect(process.env.MONGO_URI || 'mongodb://localhost:27017/offbytes');
     console.log(`MongoDB Connected: ${conn.connection.host}`);
+    
+    const PORT = process.env.PORT || 3000;
+    app.listen(PORT, '0.0.0.0', () => {
+      console.log(`Server running on port ${PORT}`);
+    });
   } catch (error) {
-    console.error(`Error: ${error.message}`);
+    console.error(`Database Connection Error: ${error.message}`);
     process.exit(1);
   }
 };
 
-connectDB();
-
-const PORT = process.env.PORT || 3000;
-
-app.listen(PORT, '0.0.0.0', () => {
-  console.log(`Server running on port ${PORT}`);
-});
+startServer();
