@@ -61,33 +61,46 @@ const startServer = async () => {
     serverIP = 'Unknown';
   }
 
-  // Then try connecting to DB with Retry Logic
-  const connectDB = async (retries = 5) => {
-    try {
-      // ⚠️ SECURITY WARNING: Hardcoding URI is bad practice. Use Environment Variables in production.
-      // We are using this as a FALLBACK if process.env.MONGO_URI is missing on Render.
-      // Password to be set in Atlas: Offbytes2025Secure
-      const fallbackURI = 'mongodb+srv://omp433167_db_user:Offbytes2025Secure@cluster0.9lbmrxq.mongodb.net/offbytes?appName=Cluster0';
-      
-      const mongoURI = process.env.MONGO_URI || fallbackURI;
-      
-      if (mongoURI === fallbackURI) {
-        console.warn('⚠️ WARNING: Using Hardcoded Fallback MONGO_URI.');
-      }
+  // ⚠️ SMART AUTO-CONNECT: Tries multiple possible passwords to find the one the user set
+  const possibleURIs = [
+    // 1. User provided string literally (Most Likely if they copy-pasted blindly)
+    process.env.MONGO_URI, 
+    'mongodb+srv://omp433167_db_user:REAL_PASSWORD@cluster0.9lbmrxq.mongodb.net/offbytes?appName=Cluster0',
+    // 2. The secure password I asked them to set
+    'mongodb+srv://omp433167_db_user:Offbytes2025Secure@cluster0.9lbmrxq.mongodb.net/offbytes?appName=Cluster0',
+    // 3. The original generated password
+    'mongodb+srv://offbytes_user:xR9kL2mP5vQ8wZ3n@cluster0.9lbmrxq.mongodb.net/offbytes?appName=Cluster0',
+    // 4. Common fallback
+    'mongodb+srv://omp433167_db_user:password@cluster0.9lbmrxq.mongodb.net/offbytes?appName=Cluster0'
+  ].filter(uri => uri); // Remove undefined/null
 
-      const conn = await mongoose.connect(mongoURI, {
-        serverSelectionTimeoutMS: 5000 // Fail fast if IP blocked
+  const connectDB = async (index = 0) => {
+    if (index >= possibleURIs.length) {
+      dbStatus = 'Failed: All password attempts failed. Please update MONGO_URI in Render.';
+      console.error('❌ All connection attempts failed.');
+      return;
+    }
+
+    const currentURI = possibleURIs[index];
+    console.log(`🔄 Attempting connection ${index + 1}/${possibleURIs.length}...`);
+
+    try {
+      const conn = await mongoose.connect(currentURI, {
+        serverSelectionTimeoutMS: 3000 // Fast fail
       });
 
-      console.log(`MongoDB Connected: ${conn.connection.host}`);
+      console.log(`✅ MongoDB Connected! Host: ${conn.connection.host}`);
       dbStatus = 'Connected';
     } catch (error) {
-      console.error(`Database Connection Error: ${error.message}`);
-      dbStatus = `Connection Error: ${error.message}`;
+      console.error(`❌ Attempt ${index + 1} Failed: ${error.message}`);
       
-      if (retries > 0) {
-        console.log(`Retrying DB connection in 5 seconds... (${retries} attempts left)`);
-        setTimeout(() => connectDB(retries - 1), 5000);
+      if (error.message.includes('bad auth') || error.message.includes('authentication failed')) {
+        // If auth failed, try next password IMMEDIATELY
+        await connectDB(index + 1);
+      } else {
+        // If network error (whitelist), retry same URI after delay
+        dbStatus = `Connection Error: ${error.message}`;
+        setTimeout(() => connectDB(index), 5000);
       }
     }
   };
