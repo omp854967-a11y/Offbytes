@@ -304,4 +304,56 @@ const getPostById = async (req, res) => {
     }
 };
 
-module.exports = { getHomeFeed, createPost, toggleLike, addComment, toggleSave, checkExpiryAndNotify, getPostById };
+// @desc    Update Post
+// @route   PUT /api/posts/:id
+// @access  Private
+const updatePost = async (req, res) => {
+    try {
+        const { content, expiresAt } = req.body;
+        let post = await Post.findById(req.params.id);
+
+        if (!post) {
+            return res.status(404).json({ message: 'Post not found' });
+        }
+
+        // Check user
+        if (post.author.id.toString() !== req.user._id.toString()) {
+            return res.status(401).json({ message: 'User not authorized' });
+        }
+
+        // Update fields
+        if (content) post.content = content;
+        if (expiresAt) post.expiresAt = new Date(expiresAt);
+        if (req.file) {
+             post.image = `/uploads/${req.file.filename}`;
+        }
+
+        const updatedPost = await post.save();
+
+        // Trigger Saved Offer Update Notification (Type 3)
+        // Notify users who saved this post
+        const savedOffers = await SavedOffer.find({ post: post._id });
+        
+        const notifications = savedOffers.map(saved => ({
+            user: saved.user,
+            title: 'Saved Offer Updated',
+            message: `The offer from ${post.author.name} has been updated.`,
+            relatedId: post._id,
+            relatedModel: 'Post',
+            type: 'saved_offer_update'
+        }));
+
+        if (notifications.length > 0) {
+            // Avoid duplicates for same update? Timestamp check could be complex.
+            // For now, just insert.
+            await Notification.insertMany(notifications);
+        }
+
+        res.json(updatedPost);
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Server Error' });
+    }
+};
+
+module.exports = { getHomeFeed, createPost, toggleLike, addComment, toggleSave, checkExpiryAndNotify, getPostById, updatePost };
